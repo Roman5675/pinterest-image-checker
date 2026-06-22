@@ -119,13 +119,7 @@ window.checkFiles = async function(){
         return;
     }
 
-    table.innerHTML =
-    `
-    <tr>
-        <th>Файл</th>
-        <th>Статус</th>
-    </tr>
-    `;
+    table.innerHTML = "";
 
     checkedFiles = [];
 
@@ -180,11 +174,6 @@ window.checkFiles = async function(){
             statusHtml =
             `
             ❌ Уже использована
-            <br>
-            <small>
-                
-                Добавлена в таблицу ${date}
-            </small>
             `;
         }
         else{
@@ -195,19 +184,34 @@ window.checkFiles = async function(){
             `;
         }
 
-        table.innerHTML +=
-        `
-        <tr>
-            <td>${file.name}</td>
-            <td class="${
+        const previewUrl =
+    URL.createObjectURL(file);
+
+table.innerHTML += `
+<div class="card">
+
+    <img src="${previewUrl}">
+
+    <div class="card-body">
+
+        <div class="card-name">
+            ${file.name}
+        </div>
+
+        <div class="${
+            exists ? "bad" : "good"
+        }">
+            ${
                 exists
-                ? "bad"
-                : "good"
-            }">
-                ${statusHtml}
-            </td>
-        </tr>
-        `;
+                ? "❌ Уже использована" 
+                : "✅ Новая"
+            }
+        </div>
+
+    </div>
+
+</div>
+`;
     }
 }
 
