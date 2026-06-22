@@ -1,100 +1,153 @@
 const API_URL =
-"https://script.google.com/macros/s/AKfycbyGSugGmzHlFHDmLj_Pe8YqYfbpTTM8HCPhLDSVI9PfLIW6VjlOekcy1pSywyQDviW2/exec";
+"https://script.google.com/macros/s/AKfycbyFNpkRg8mGW7gd7E4T3AOaYyo1ffMZdhv7Ckvh9xVqwQ2eNuNdrCmFnvdfz_1zHETk/exec";
 
-let currentHash = "";
-let currentFile = "";
+const fileInput =
+document.getElementById("files");
 
-async function sha256(file) {
+const dropZone =
+document.getElementById("dropZone");
 
-    const buffer =
-        await file.arrayBuffer();
+let checkedFiles = [];
 
-    const hashBuffer =
-        await crypto.subtle.digest(
-            "SHA-256",
-            buffer
-        );
+dropZone.addEventListener("click", () => {
+fileInput.click();
+});
 
-    return Array
-        .from(
-            new Uint8Array(hashBuffer)
-        )
-        .map(b =>
-            b.toString(16)
-             .padStart(2,"0"))
-        .join("");
+dropZone.addEventListener("dragover", e => {
+e.preventDefault();
+dropZone.classList.add("drag");
+});
+
+dropZone.addEventListener("dragleave", () => {
+dropZone.classList.remove("drag");
+});
+
+dropZone.addEventListener("drop", e => {
+
+e.preventDefault();
+
+dropZone.classList.remove("drag");
+
+fileInput.files =
+    e.dataTransfer.files;
+
+});
+
+async function sha256(file){
+
+const buffer =
+    await file.arrayBuffer();
+
+const hashBuffer =
+    await crypto.subtle.digest(
+        "SHA-256",
+        buffer
+    );
+
+return Array
+    .from(
+        new Uint8Array(hashBuffer)
+    )
+    .map(x =>
+        x.toString(16)
+         .padStart(2,"0")
+    )
+    .join("");
+
 }
 
-async function checkImage() {
+async function checkFiles(){
 
-    const file =
-      document.getElementById("file")
-      .files[0];
+const files =
+    fileInput.files;
 
-    if(!file){
-        alert("Выберите файл");
-        return;
-    }
+if(files.length === 0){
+    alert("Выберите файлы");
+    return;
+}
 
-    currentHash =
+const table =
+    document.getElementById("results");
+
+table.innerHTML =
+`
+<tr>
+    <th>Файл</th>
+    <th>Статус</th>
+</tr>
+`;
+
+checkedFiles = [];
+
+const hashes =
+    await fetch(API_URL)
+    .then(r => r.json());
+
+for(const file of files){
+
+    const hash =
         await sha256(file);
 
-    currentFile =
-        file.name;
-
-    const hashes =
-        await fetch(API_URL)
-        .then(r=>r.json());
-
     const exists =
-        hashes.includes(currentHash);
+        hashes.includes(hash);
 
-    const result =
-      document.getElementById("result");
+    checkedFiles.push({
+        file,
+        hash,
+        exists
+    });
 
-    const saveBtn =
-      document.getElementById("saveBtn");
-
-    if(exists){
-
-        result.innerHTML =
-          "❌ Уже использовалась";
-
-        saveBtn.style.display =
-          "none";
-
-    }else{
-
-        result.innerHTML =
-          "✅ Свободна";
-
-        saveBtn.style.display =
-          "inline-block";
-    }
+    table.innerHTML +=
+    `
+    <tr>
+        <td>${file.name}</td>
+        <td class="${
+            exists ? "bad" : "good"
+        }">
+            ${
+                exists
+                ? "❌ Уже использована"
+                : "✅ Новая"
+            }
+        </td>
+    </tr>
+    `;
 }
 
-async function saveImage() {
+}
 
-    const user =
-      document.getElementById("user")
-      .value || "Unknown";
+async function saveNewFiles(){
+
+if(checkedFiles.length === 0){
+    alert("Сначала выполните проверку");
+    return;
+}
+
+const user =
+    document.getElementById("user")
+    .value || "Unknown";
+
+let count = 0;
+
+for(const item of checkedFiles){
+
+    if(item.exists)
+        continue;
 
     await fetch(API_URL,{
         method:"POST",
         body:JSON.stringify({
-            hash:currentHash,
-            fileName:currentFile,
+            hash:item.hash,
+            fileName:item.file.name,
             user:user
         })
     });
 
-    document
-      .getElementById("result")
-      .innerHTML =
-      "✅ Сохранено";
+    count++;
+}
 
-    document
-      .getElementById("saveBtn")
-      .style.display =
-      "none";
+alert(
+    "Добавлено: " + count
+);
+
 }

@@ -1,55 +1,119 @@
 <!DOCTYPE html>
-<html>
+
+<html lang="ru">
+
 <head>
 <meta charset="UTF-8">
-<title>Pinterest Checker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Pinterest Image Checker</title>
+
 <style>
 
 body{
-    font-family:Arial;
-    max-width:700px;
-    margin:auto;
-    padding:30px;
+    font-family: Arial, sans-serif;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 30px;
+}
+
+h1{
+    text-align:center;
+}
+
+#dropZone{
+    border: 3px dashed #999;
+    border-radius: 12px;
+    padding: 50px;
+    text-align: center;
+    cursor: pointer;
+    margin-bottom: 20px;
+    transition: 0.2s;
+}
+
+#dropZone:hover{
+    background:#f5f5f5;
+}
+
+#dropZone.drag{
+    background:#ececec;
+}
+
+input[type="text"]{
+    padding:10px;
+    width:250px;
 }
 
 button{
     padding:10px 20px;
     margin-top:10px;
+    margin-right:10px;
+    cursor:pointer;
 }
 
-#result{
+table{
+    width:100%;
+    border-collapse: collapse;
     margin-top:20px;
-    font-size:20px;
+}
+
+th, td{
+    border:1px solid #ddd;
+    padding:10px;
+}
+
+th{
+    background:#f4f4f4;
+}
+
+.good{
+    color:green;
+    font-weight:bold;
+}
+
+.bad{
+    color:red;
+    font-weight:bold;
 }
 
 </style>
+
 </head>
+
 <body>
 
 <h1>Pinterest Image Checker</h1>
 
-<input type="file" id="file">
-
-<br><br>
-
 <input
-    id="user"
-    placeholder="Ваше имя">
+ type="file"
+ id="files"
+ multiple
+ hidden>
 
-<br><br>
+<div id="dropZone">
+    📂 Перетащите изображения сюда<br><br>
+    или нажмите для выбора файлов
+</div>
 
-<button onclick="checkImage()">
-Проверить
+<div>
+    <input
+        type="text"
+        id="user"
+        placeholder="Ваше имя">
+</div>
+
+<br>
+
+<button onclick="checkFiles()">
+    Проверить
 </button>
 
-<button
-    id="saveBtn"
-    onclick="saveImage()"
-    style="display:none">
-Отметить использованной
+<button onclick="saveNewFiles()">
+    Добавить новые
 </button>
 
-<div id="result"></div>
+<table id="results">
+</table>
 
 <script src="app.js"></script>
 
