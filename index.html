@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ru">
 
 <head>
@@ -10,25 +9,32 @@
 
 <style>
 
+*{
+    box-sizing:border-box;
+}
+
 body{
     font-family: Arial, sans-serif;
-    max-width: 1000px;
-    margin: 0 auto;
-    padding: 30px;
+    max-width:1000px;
+    margin:0 auto;
+    padding:20px;
+    background:#fafafa;
 }
 
 h1{
     text-align:center;
+    margin-bottom:30px;
 }
 
 #dropZone{
-    border: 3px dashed #999;
-    border-radius: 12px;
-    padding: 50px;
-    text-align: center;
-    cursor: pointer;
-    margin-bottom: 20px;
-    transition: 0.2s;
+    border:3px dashed #999;
+    border-radius:12px;
+    padding:50px 20px;
+    text-align:center;
+    cursor:pointer;
+    margin-bottom:15px;
+    transition:0.2s;
+    background:white;
 }
 
 #dropZone:hover{
@@ -39,27 +45,60 @@ h1{
     background:#ececec;
 }
 
+#fileCount{
+    text-align:center;
+    margin-bottom:20px;
+    color:#666;
+    font-size:14px;
+}
+
+.controls{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:20px;
+}
+
 input[type="text"]{
-    padding:10px;
-    width:250px;
+    flex:1;
+    min-width:220px;
+    padding:12px;
+    border:1px solid #ccc;
+    border-radius:8px;
 }
 
 button{
-    padding:10px 20px;
-    margin-top:10px;
-    margin-right:10px;
+    padding:12px 20px;
+    border:none;
+    border-radius:8px;
     cursor:pointer;
+    font-size:14px;
+}
+
+.check-btn{
+    background:#1976d2;
+    color:white;
+}
+
+.save-btn{
+    background:#2e7d32;
+    color:white;
+}
+
+button:hover{
+    opacity:0.9;
 }
 
 table{
     width:100%;
-    border-collapse: collapse;
-    margin-top:20px;
+    border-collapse:collapse;
+    background:white;
 }
 
-th, td{
+th,
+td{
     border:1px solid #ddd;
-    padding:10px;
+    padding:12px;
 }
 
 th{
@@ -76,44 +115,86 @@ th{
     font-weight:bold;
 }
 
+.info{
+    margin-top:20px;
+    padding:12px;
+    border-radius:8px;
+    background:white;
+    border:1px solid #eee;
+}
+
+@media(max-width:768px){
+
+    body{
+        padding:15px;
+    }
+
+    #dropZone{
+        padding:35px 15px;
+    }
+
+    .controls{
+        flex-direction:column;
+    }
+
+    button{
+        width:100%;
+    }
+
+    table{
+        font-size:14px;
+    }
+}
+
 </style>
 
 </head>
 
 <body>
 
-<h1>Pinterest Image Checker</h1>
+<h1>📌 Pinterest Image Checker</h1>
 
 <input
- type="file"
- id="files"
- multiple
- hidden>
+    type="file"
+    id="files"
+    multiple
+    hidden
+>
 
 <div id="dropZone">
     📂 Перетащите изображения сюда<br><br>
     или нажмите для выбора файлов
 </div>
 
-<div>
+<div id="fileCount">
+    Файлы не выбраны
+</div>
+
+<div class="controls">
+
     <input
         type="text"
         id="user"
-        placeholder="Ваше имя">
+        placeholder="Ваше имя"
+    >
+
+    <button
+        class="check-btn"
+        onclick="checkFiles()"
+    >
+        Проверить
+    </button>
+
+    <button
+        class="save-btn"
+        onclick="saveNewFiles()"
+    >
+        Добавить новые
+    </button>
+
 </div>
 
-<br>
-
-<button onclick="checkFiles()">
-    Проверить
-</button>
-
-<button onclick="saveNewFiles()">
-    Добавить новые
-</button>
-
-<table id="results">
-</table>
+<table id="results"></table>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="app.js"></script>

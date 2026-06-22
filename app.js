@@ -1,8 +1,7 @@
-
 document.addEventListener("DOMContentLoaded", () => {
 
 // =====================
-// SUPABASE INIT
+// SUPABASE
 // =====================
 const SUPABASE_URL =
 "https://tpxpsalgvjoemldlnozj.supabase.co";
@@ -16,24 +15,44 @@ const supabase = window.supabase.createClient(
 );
 
 // =====================
-// DOM ELEMENTS
+// DOM
 // =====================
-const fileInput = document.getElementById("files");
-const dropZone = document.getElementById("dropZone");
-const table = document.getElementById("results");
-const userInput = document.getElementById("user");
+const fileInput =
+document.getElementById("files");
 
-// локальное хранение файлов (ВАЖНО)
+const dropZone =
+document.getElementById("dropZone");
+
+const table =
+document.getElementById("results");
+
+const userInput =
+document.getElementById("user");
+
+const fileCount =
+document.getElementById("fileCount");
+
 let selectedFiles = [];
 let checkedFiles = [];
 
 // =====================
-// DROP ZONE EVENTS
+// FILE PICKER
 // =====================
 dropZone.addEventListener("click", () => {
     fileInput.click();
 });
 
+fileInput.addEventListener("change", () => {
+
+    selectedFiles = [...fileInput.files];
+
+    fileCount.textContent =
+        `Выбрано файлов: ${selectedFiles.length}`;
+});
+
+// =====================
+// DRAG & DROP
+// =====================
 dropZone.addEventListener("dragover", e => {
     e.preventDefault();
     dropZone.classList.add("drag");
@@ -44,113 +63,213 @@ dropZone.addEventListener("dragleave", () => {
 });
 
 dropZone.addEventListener("drop", e => {
+
     e.preventDefault();
+
     dropZone.classList.remove("drag");
 
-    selectedFiles = [...e.dataTransfer.files];
+    selectedFiles =
+        [...e.dataTransfer.files];
 
-    alert("Файлов добавлено: " + selectedFiles.length);
+    fileCount.textContent =
+        `Выбрано файлов: ${selectedFiles.length}`;
 });
 
 // =====================
-// HASH FUNCTION
+// SHA256
 // =====================
 async function sha256(file){
 
-    const buffer = await file.arrayBuffer();
+    const buffer =
+        await file.arrayBuffer();
 
-    const hashBuffer = await crypto.subtle.digest(
-        "SHA-256",
-        buffer
-    );
+    const hashBuffer =
+        await crypto.subtle.digest(
+            "SHA-256",
+            buffer
+        );
 
-    return Array.from(new Uint8Array(hashBuffer))
-        .map(b => b.toString(16).padStart(2,"0"))
+    return Array
+        .from(
+            new Uint8Array(hashBuffer)
+        )
+        .map(x =>
+            x.toString(16)
+             .padStart(2,"0")
+        )
         .join("");
 }
 
 // =====================
-// CHECK FILES
+// CHECK
 // =====================
 window.checkFiles = async function(){
 
-    const files = selectedFiles.length
+    const files =
+        selectedFiles.length
         ? selectedFiles
         : fileInput.files;
 
     if(!files.length){
-        alert("Выберите файлы");
+
+        alert(
+            "Выберите файлы"
+        );
+
         return;
     }
 
-    table.innerHTML = `
-        <tr>
-            <th>Файл</th>
-            <th>Статус</th>
-        </tr>
+    table.innerHTML =
+    `
+    <tr>
+        <th>Файл</th>
+        <th>Статус</th>
+    </tr>
     `;
 
     checkedFiles = [];
 
     for(const file of files){
 
-        const hash = await sha256(file);
+        const hash =
+            await sha256(file);
 
-        const { data, error } = await supabase
+        const { data, error } =
+            await supabase
             .from("images")
-            .select("id")
+            .select(
+                "id, user_name, created_at"
+            )
             .eq("hash", hash)
             .limit(1);
 
-        const exists = data && data.length > 0;
+        if(error){
+
+            console.error(error);
+
+            continue;
+        }
+
+        const exists =
+            data &&
+            data.length > 0;
 
         checkedFiles.push({
+
             file,
             hash,
             exists
+
         });
 
-        table.innerHTML += `
-            <tr>
-                <td>${file.name}</td>
-                <td class="${exists ? "bad" : "good"}">
-                    ${exists ? "❌ Уже использована" : "✅ Новая"}
-                </td>
-            </tr>
+        let statusHtml = "";
+
+        if(exists){
+
+            const owner =
+                data[0].user_name
+                || "Неизвестно";
+
+            const date =
+                data[0].created_at
+                ? new Date(
+                    data[0].created_at
+                  ).toLocaleDateString()
+                : "";
+
+            statusHtml =
+            `
+            ❌ Уже использована
+            <br>
+            <small>
+                
+                Добавлена в таблицу ${date}
+            </small>
+            `;
+        }
+        else{
+
+            statusHtml =
+            `
+            ✅ Новая
+            `;
+        }
+
+        table.innerHTML +=
+        `
+        <tr>
+            <td>${file.name}</td>
+            <td class="${
+                exists
+                ? "bad"
+                : "good"
+            }">
+                ${statusHtml}
+            </td>
+        </tr>
         `;
     }
 }
 
 // =====================
-// SAVE NEW FILES
+// SAVE
 // =====================
 window.saveNewFiles = async function(){
 
-    if(!checkedFiles.length){
-        alert("Сначала выполните проверку");
+    if(
+        checkedFiles.length === 0
+    ){
+
+        alert(
+            "Сначала выполните проверку"
+        );
+
         return;
     }
 
-    const user = userInput.value || "Unknown";
+    const user =
+        userInput.value.trim()
+        || "Unknown";
 
     let count = 0;
 
     for(const item of checkedFiles){
 
-        if(item.exists) continue;
+        if(item.exists)
+            continue;
 
-        const { error } = await supabase
+        const { error } =
+            await supabase
             .from("images")
             .insert({
-                hash: item.hash,
-                filename: item.file.name,
-                user_name: user
+
+                hash:
+                    item.hash,
+
+                filename:
+                    item.file.name,
+
+                user_name:
+                    user
+
             });
 
-        if(!error) count++;
+        if(!error){
+
+            count++;
+        }
+        else{
+
+            console.error(error);
+        }
     }
 
-    alert("Добавлено: " + count);
+    checkedFiles = [];
+
+    alert(
+        "Добавлено: "
+        + count
+    );
 }
 
 });
