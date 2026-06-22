@@ -254,10 +254,7 @@ window.saveNewFiles = async function(){
         return;
     }
 
-    const user =
-        userInput.value.trim()
-        || "Unknown";
-
+    
     let count = 0;
 
     for(const item of newFiles){
@@ -268,7 +265,6 @@ window.saveNewFiles = async function(){
             .insert({
                 hash: item.hash,
                 filename: item.file.name,
-                user_name: user
             });
 
         if(error){
