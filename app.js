@@ -218,16 +218,39 @@ table.innerHTML += `
 // =====================
 // SAVE
 // =====================
+// =====================
+// SAVE
+// =====================
 window.saveNewFiles = async function(){
 
-    if(
-        checkedFiles.length === 0
-    ){
+    if(checkedFiles.length === 0){
 
         alert(
             "Сначала выполните проверку"
         );
 
+        return;
+    }
+
+    const newFiles =
+        checkedFiles.filter(
+            x => !x.exists
+        );
+
+    if(newFiles.length === 0){
+
+        alert(
+            "Новых изображений нет"
+        );
+
+        return;
+    }
+
+    const confirmed = confirm(
+        `Будет добавлено ${newFiles.length} изображений.\n\nПродолжить?`
+    );
+
+    if(!confirmed){
         return;
     }
 
@@ -237,42 +260,37 @@ window.saveNewFiles = async function(){
 
     let count = 0;
 
-    for(const item of checkedFiles){
-
-        if(item.exists)
-            continue;
+    for(const item of newFiles){
 
         const { error } =
             await supabase
             .from("images")
             .insert({
-
-                hash:
-                    item.hash,
-
-                filename:
-                    item.file.name,
-
-                user_name:
-                    user
-
+                hash: item.hash,
+                filename: item.file.name,
+                user_name: user
             });
 
-        if(!error){
-
-            count++;
-        }
-        else{
+        if(error){
 
             console.error(error);
+
+        } else {
+
+            count++;
         }
     }
 
     checkedFiles = [];
+    selectedFiles = [];
+
+    fileInput.value = "";
+
+    fileCount.textContent =
+        "Файлы не выбраны";
 
     alert(
-        "Добавлено: "
-        + count
+        `Успешно добавлено: ${count}`
     );
 }
 
