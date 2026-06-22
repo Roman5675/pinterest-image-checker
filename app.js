@@ -1,153 +1,156 @@
-const API_URL =
-"https://script.google.com/macros/s/AKfycbyFNpkRg8mGW7gd7E4T3AOaYyo1ffMZdhv7Ckvh9xVqwQ2eNuNdrCmFnvdfz_1zHETk/exec";
 
-const fileInput =
-document.getElementById("files");
+document.addEventListener("DOMContentLoaded", () => {
 
-const dropZone =
-document.getElementById("dropZone");
+// =====================
+// SUPABASE INIT
+// =====================
+const SUPABASE_URL =
+"https://tpxpsalgvjoemldlnozj.supabase.co";
 
+const SUPABASE_KEY =
+"sb_publishable_gCK8qSuVmAZ8OqMoqhWNqw_d1pdpPYR";
+
+const supabase = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+// =====================
+// DOM ELEMENTS
+// =====================
+const fileInput = document.getElementById("files");
+const dropZone = document.getElementById("dropZone");
+const table = document.getElementById("results");
+const userInput = document.getElementById("user");
+
+// локальное хранение файлов (ВАЖНО)
+let selectedFiles = [];
 let checkedFiles = [];
 
+// =====================
+// DROP ZONE EVENTS
+// =====================
 dropZone.addEventListener("click", () => {
-fileInput.click();
+    fileInput.click();
 });
 
 dropZone.addEventListener("dragover", e => {
-e.preventDefault();
-dropZone.classList.add("drag");
+    e.preventDefault();
+    dropZone.classList.add("drag");
 });
 
 dropZone.addEventListener("dragleave", () => {
-dropZone.classList.remove("drag");
+    dropZone.classList.remove("drag");
 });
 
 dropZone.addEventListener("drop", e => {
+    e.preventDefault();
+    dropZone.classList.remove("drag");
 
-e.preventDefault();
+    selectedFiles = [...e.dataTransfer.files];
 
-dropZone.classList.remove("drag");
-
-fileInput.files =
-    e.dataTransfer.files;
-
+    alert("Файлов добавлено: " + selectedFiles.length);
 });
 
+// =====================
+// HASH FUNCTION
+// =====================
 async function sha256(file){
 
-const buffer =
-    await file.arrayBuffer();
+    const buffer = await file.arrayBuffer();
 
-const hashBuffer =
-    await crypto.subtle.digest(
+    const hashBuffer = await crypto.subtle.digest(
         "SHA-256",
         buffer
     );
 
-return Array
-    .from(
-        new Uint8Array(hashBuffer)
-    )
-    .map(x =>
-        x.toString(16)
-         .padStart(2,"0")
-    )
-    .join("");
-
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2,"0"))
+        .join("");
 }
 
-async function checkFiles(){
+// =====================
+// CHECK FILES
+// =====================
+window.checkFiles = async function(){
 
-const files =
-    fileInput.files;
+    const files = selectedFiles.length
+        ? selectedFiles
+        : fileInput.files;
 
-if(files.length === 0){
-    alert("Выберите файлы");
-    return;
-}
+    if(!files.length){
+        alert("Выберите файлы");
+        return;
+    }
 
-const table =
-    document.getElementById("results");
-
-table.innerHTML =
-`
-<tr>
-    <th>Файл</th>
-    <th>Статус</th>
-</tr>
-`;
-
-checkedFiles = [];
-
-const hashes =
-    await fetch(API_URL)
-    .then(r => r.json());
-
-for(const file of files){
-
-    const hash =
-        await sha256(file);
-
-    const exists =
-        hashes.includes(hash);
-
-    checkedFiles.push({
-        file,
-        hash,
-        exists
-    });
-
-    table.innerHTML +=
-    `
-    <tr>
-        <td>${file.name}</td>
-        <td class="${
-            exists ? "bad" : "good"
-        }">
-            ${
-                exists
-                ? "❌ Уже использована"
-                : "✅ Новая"
-            }
-        </td>
-    </tr>
+    table.innerHTML = `
+        <tr>
+            <th>Файл</th>
+            <th>Статус</th>
+        </tr>
     `;
+
+    checkedFiles = [];
+
+    for(const file of files){
+
+        const hash = await sha256(file);
+
+        const { data, error } = await supabase
+            .from("images")
+            .select("id")
+            .eq("hash", hash)
+            .limit(1);
+
+        const exists = data && data.length > 0;
+
+        checkedFiles.push({
+            file,
+            hash,
+            exists
+        });
+
+        table.innerHTML += `
+            <tr>
+                <td>${file.name}</td>
+                <td class="${exists ? "bad" : "good"}">
+                    ${exists ? "❌ Уже использована" : "✅ Новая"}
+                </td>
+            </tr>
+        `;
+    }
 }
 
+// =====================
+// SAVE NEW FILES
+// =====================
+window.saveNewFiles = async function(){
+
+    if(!checkedFiles.length){
+        alert("Сначала выполните проверку");
+        return;
+    }
+
+    const user = userInput.value || "Unknown";
+
+    let count = 0;
+
+    for(const item of checkedFiles){
+
+        if(item.exists) continue;
+
+        const { error } = await supabase
+            .from("images")
+            .insert({
+                hash: item.hash,
+                filename: item.file.name,
+                user_name: user
+            });
+
+        if(!error) count++;
+    }
+
+    alert("Добавлено: " + count);
 }
 
-async function saveNewFiles(){
-
-if(checkedFiles.length === 0){
-    alert("Сначала выполните проверку");
-    return;
-}
-
-const user =
-    document.getElementById("user")
-    .value || "Unknown";
-
-let count = 0;
-
-for(const item of checkedFiles){
-
-    if(item.exists)
-        continue;
-
-    await fetch(API_URL,{
-        method:"POST",
-        body:JSON.stringify({
-            hash:item.hash,
-            fileName:item.file.name,
-            user:user
-        })
-    });
-
-    count++;
-}
-
-alert(
-    "Добавлено: " + count
-);
-
-}
+});
