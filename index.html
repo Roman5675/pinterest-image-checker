@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Pinterest Checker</title>
+<style>
+
+body{
+    font-family:Arial;
+    max-width:700px;
+    margin:auto;
+    padding:30px;
+}
+
+button{
+    padding:10px 20px;
+    margin-top:10px;
+}
+
+#result{
+    margin-top:20px;
+    font-size:20px;
+}
+
+</style>
+</head>
+<body>
+
+<h1>Pinterest Image Checker</h1>
+
+<input type="file" id="file">
+
+<br><br>
+
+<input
+    id="user"
+    placeholder="Ваше имя">
+
+<br><br>
+
+<button onclick="checkImage()">
+Проверить
+</button>
+
+<button
+    id="saveBtn"
+    onclick="saveImage()"
+    style="display:none">
+Отметить использованной
+</button>
+
+<div id="result"></div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
