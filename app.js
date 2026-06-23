@@ -1,9 +1,7 @@
 // ===================== app.js (ES-модуль) =====================
 import { pipeline, RawImage, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
 
-// ---------- Настройка окружения (только хост, шаблон по умолчанию) ----------
 env.remoteHost = 'https://huggingface.co';
-// remotePathTemplate не задаём – используется дефолтный
 env.useBrowserCache = true;
 env.allowLocalModels = false;
 
@@ -22,7 +20,6 @@ let checkedFiles = [];
 let DB_CACHE = [];
 let clipPipeline = null;
 
-// Инициализация CLIP
 async function initClip() {
     console.log("⏳ Loading CLIP model...");
     clipPipeline = await pipeline("image-feature-extraction", "Xenova/clip-vit-base-patch32");
@@ -70,6 +67,21 @@ function hammingDistance(a, b) {
     let d = 0;
     for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) d++;
     return d;
+}
+
+// Косинусное сходство для CLIP-векторов
+function cosineSimilarity(vecA, vecB) {
+    if (!vecA || !vecB || vecA.length !== vecB.length) return 0;
+    let dotProduct = 0;
+    let normA = 0;
+    let normB = 0;
+    for (let i = 0; i < vecA.length; i++) {
+        dotProduct += vecA[i] * vecB[i];
+        normA += vecA[i] * vecA[i];
+        normB += vecB[i] * vecB[i];
+    }
+    const magnitude = Math.sqrt(normA) * Math.sqrt(normB);
+    return magnitude === 0 ? 0 : dotProduct / magnitude;
 }
 
 // CLIP-эмбеддинг
@@ -124,7 +136,7 @@ function updateFileCount() {
         : "Файлы не выбраны";
 }
 
-// Проверка файлов
+// Проверка файлов (с dHash и CLIP)
 window.checkFiles = async function () {
     const files = selectedFiles.length ? selectedFiles : fileInput.files;
     if (!files.length) {
@@ -148,10 +160,15 @@ window.checkFiles = async function () {
                 exists = true;
                 break;
             }
-            if (row.phash) {
+            if (!similar && row.phash) {
                 const dist = hammingDistance(phash, row.phash);
                 if (dist <= 10) similar = true;
             }
+            if (!similar && clipVec.length > 0 && row.clip_embedding && row.clip_embedding.length > 0) {
+                const similarity = cosineSimilarity(clipVec, row.clip_embedding);
+                if (similarity >= 0.95) similar = true;  // порог для одинаковых / очень похожих
+            }
+            if (similar) break;
         }
 
         checkedFiles.push({ file, hash, phash, clipVec, exists, similar });
