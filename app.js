@@ -1,5 +1,11 @@
 // ===================== app.js (ES-модуль) =====================
-import { pipeline, RawImage } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+import { pipeline, RawImage, env } from 'https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2';
+
+// ---------- Настройка окружения (только хост, шаблон по умолчанию) ----------
+env.remoteHost = 'https://huggingface.co';
+// remotePathTemplate не задаём – используется дефолтный
+env.useBrowserCache = true;
+env.allowLocalModels = false;
 
 const SUPABASE_URL = "https://tpxpsalgvjoemldlnozj.supabase.co";
 const SUPABASE_KEY = "sb_publishable_gCK8qSuVmAZ8OqMoqhWNqw_d1pdpPYR";
@@ -16,7 +22,7 @@ let checkedFiles = [];
 let DB_CACHE = [];
 let clipPipeline = null;
 
-// Инициализация CLIP для изображений
+// Инициализация CLIP
 async function initClip() {
     console.log("⏳ Loading CLIP model...");
     clipPipeline = await pipeline("image-feature-extraction", "Xenova/clip-vit-base-patch32");
@@ -150,18 +156,17 @@ window.checkFiles = async function () {
 
         checkedFiles.push({ file, hash, phash, clipVec, exists, similar });
 
-        // Определяем текст и класс для статуса
         let statusText = "";
         let statusClass = "";
         if (exists) {
             statusText = "❌ уже используется";
-            statusClass = "bad";   // красный цвет
+            statusClass = "bad";
         } else if (similar) {
             statusText = "⚠️ похоже";
-            statusClass = "bad";   // тоже красный (или можно убрать, если нужен обычный)
+            statusClass = "bad";
         } else {
             statusText = "✅ новое";
-            statusClass = "good";  // зелёный цвет
+            statusClass = "good";
         }
 
         const url = URL.createObjectURL(file);
