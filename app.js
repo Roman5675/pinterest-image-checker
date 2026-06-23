@@ -26,9 +26,6 @@ document.getElementById("dropZone");
 const table =
 document.getElementById("results");
 
-const userInput =
-document.getElementById("user");
-
 const fileCount =
 document.getElementById("fileCount");
 
@@ -100,6 +97,96 @@ async function sha256(file){
         .join("");
 }
 
+
+// =====================
+// dHash
+// =====================
+async function dHash(file){
+
+    return new Promise(resolve => {
+
+        const img = new Image();
+
+        img.onload = () => {
+
+            const canvas =
+                document.createElement("canvas");
+
+            canvas.width = 9;
+            canvas.height = 8;
+
+            const ctx =
+                canvas.getContext("2d");
+
+            ctx.drawImage(
+                img,
+                0,
+                0,
+                9,
+                8
+            );
+
+            const pixels =
+                ctx.getImageData(
+                    0,
+                    0,
+                    9,
+                    8
+                ).data;
+
+            let hash = "";
+
+            for(let y = 0; y < 8; y++){
+
+                for(let x = 0; x < 8; x++){
+
+                    const left =
+                        ((y * 9) + x) * 4;
+
+                    const right =
+                        ((y * 9) + x + 1) * 4;
+
+                    const leftGray =
+                        pixels[left] +
+                        pixels[left+1] +
+                        pixels[left+2];
+
+                    const rightGray =
+                        pixels[right] +
+                        pixels[right+1] +
+                        pixels[right+2];
+
+                    hash +=
+                        leftGray > rightGray
+                        ? "1"
+                        : "0";
+                }
+            }
+
+            resolve(hash);
+        };
+
+        img.src =
+            URL.createObjectURL(file);
+    });
+}
+
+function hammingDistance(a, b){
+
+    if(!a || !b) return 999;
+
+    let distance = 0;
+
+    for(let i = 0; i < a.length; i++){
+
+        if(a[i] !== b[i]){
+            distance++;
+        }
+    }
+
+    return distance;
+}
+
 // =====================
 // CHECK
 // =====================
@@ -127,61 +214,87 @@ window.checkFiles = async function(){
 
         const hash =
             await sha256(file);
+        
+        const phash =
+            await dHash(file);
 
         const { data, error } =
             await supabase
             .from("images")
             .select(
-                "id, user_name, created_at"
-            )
-            .eq("hash", hash)
-            .limit(1);
+                "id, hash, phash"
+            );
 
         if(error){
 
             console.error(error);
-
             continue;
         }
 
-        const exists =
-            data &&
-            data.length > 0;
+        let exists = false;
+        let similar = false;
+
+        let similarityPercent = 0;
+
+        for(const row of data){
+
+            // точное совпадение
+            if(row.hash === hash){
+
+                exists = true;
+                break;
+            }
+
+            // похожее изображение
+            if(row.phash){
+
+                const distance =
+                    hammingDistance(
+                        phash,
+                        row.phash
+                    );
+
+                const percent =
+                    Math.round(
+                        (1 - distance / 64) * 100
+                    );
+
+                if(percent > similarityPercent){
+                    similarityPercent = percent;
+                }
+
+                if(distance <= 10){
+
+                    similar = true;
+                }
+            }
+        }
 
         checkedFiles.push({
 
             file,
             hash,
-            exists
+            phash,
+            exists: exists || similar
 
         });
 
-        let statusHtml = "";
+        let statusClass = "good";
+        let statusText = "✅ Новая";
 
         if(exists){
 
-            const owner =
-                data[0].user_name
-                || "Неизвестно";
+            statusClass = "bad";
+            statusText = "❌ Уже использована";
 
-            const date =
-                data[0].created_at
-                ? new Date(
-                    data[0].created_at
-                  ).toLocaleDateString()
-                : "";
-
-            statusHtml =
-            `
-            ❌ Уже использована
-            `;
         }
-        else{
+        else if(similar){
 
-            statusHtml =
-            `
-            ✅ Новая
-            `;
+            statusClass = "bad";
+
+            statusText =
+                `⚠️ Похожее изображение<br>
+                Сходство: ${similarityPercent}%`;
         }
 
         const previewUrl =
@@ -198,14 +311,8 @@ table.innerHTML += `
             ${file.name}
         </div>
 
-        <div class="${
-            exists ? "bad" : "good"
-        }">
-            ${
-                exists
-                ? "❌ Уже использована" 
-                : "✅ Новая"
-            }
+        <div class="${statusClass}">
+            ${statusText}
         </div>
 
     </div>
@@ -263,9 +370,15 @@ window.saveNewFiles = async function(){
             await supabase
             .from("images")
             .insert({
-                hash: item.hash,
-                filename: item.file.name,
-            });
+
+            hash: item.hash,
+
+            phash: item.phash,
+
+            filename:
+                item.file.name
+
+        });
 
         if(error){
 
